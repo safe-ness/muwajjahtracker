@@ -370,7 +370,7 @@
     document.addEventListener("DOMContentLoaded", async () => {
       const pembimbingSelect = $("#pembimbing");
       try {
-        const res = await fetch("pembimbing.json");
+        const res = await fetch("./api/data/pembimbing.json");
         const data = await res.json();
 
         pembimbingSelect.empty().append('<option value="">-- Pilih Ustadz Pembimbing --</option>');
