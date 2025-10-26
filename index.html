@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <title>Pantau Pembelajaran Santri</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- jQuery dan Select2 -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+  <style>
+    body {
+      background-color: #f8fafc;
+      font-family: "Segoe UI", sans-serif;
+    }
+    .card {
+      border: none;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      border-radius: 12px;
+    }
+    .form-control, .form-select {
+      border-radius: 8px;
+    }
+    #tabelMateri tr.reported {
+      background: #f3f3f3;
+      color: #6c757d;
+    }
+    #progress {
+      background: #fff;
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+
+    /* 🔹 Style RTL otomatis */
+    .rtl {
+      direction: rtl;
+      text-align: right;
+      font-family: "Amiri", "Scheherazade New", "Traditional Arabic", serif;
+      font-size: 1.05rem;
+    }
+
+    /* 🔹 Untuk teks Latin biasa */
+    .ltr {
+      direction: ltr;
+      text-align: left;
+    }
+
+    /* Toast position */
+    .toast-container {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 1080;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container py-4">
+    <h2 class="text-center mb-4 fw-semibold text-primary">📘 Pantau Pembelajaran Santri</h2>
+
+    <div class="card mb-4">
+      <div class="card-body">
+        <form id="formSantri" class="row g-3" onsubmit="return false;">
+            
+          <div class="col-md-6">
+            <label class="form-label d-flex justify-content-between align-items-center">
+              <span>Stambuk</span>
+              <button 
+                id="btnScanQR" 
+                class="btn btn-success btn-sm d-flex align-items-center" 
+                type="button"
+                data-bs-toggle="modal" 
+                data-bs-target="#modalScanQR">
+                📷 Scan
+              </button>
+            </label>
+            <div class="input-group">
+              <!-- Hapus disabled, tetap readonly agar user tidak ubah manual tapi script bisa set -->
+              <input 
+                type="text" 
+                readonly 
+                id="stambuk" 
+                class="form-control" 
+                placeholder="Scan QR untuk isi otomatis" 
+                required>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Nama Santri</label>
+            <input type="text" readonly id="nama" class="form-control" placeholder="Nama Santri" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Kelas</label>
+            <input type="text" readonly id="kelas" class="form-control" placeholder="Kelas" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Daerah</label>
+            <input type="text" readonly id="daerah" class="form-control" placeholder="Daerah" required>
+          </div>
+          <div class="col-md-6">
+            <label for="pembimbing" class="form-label">Ustadz Pembimbing</label>
+            <select id="pembimbing" class="form-select" style="width:100%;">
+              <option value="">Loading...</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Jenis Belajar</label>
+            <select id="jenis" class="form-select" required>
+              <option value="">-- Jenis Belajar --</option>
+              <option value="Menghafal">Menghafal (tahfizh)</option>
+              <option value="Merangkum">Merangkum (takhlish)</option>
+              <option value="Menggaris">Menggaris bawahi (Tasthir)</option>
+              <option value="Menanyakan">Meminta penjelasan (Bayan)</option>
+              <option value="Latihan">Latihan soal (tatbiq)</option>
+              <option value="Mengajar">Mengajar orang lain (Ta’lim)</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Pelajaran</label>
+            <select id="pelajaran" class="form-select" required></select>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table id="tabelMateri" class="table table-striped align-middle" style="display:none;">
+            <thead class="table-primary">
+              <tr>
+                <th scope="col">No</th>
+                <th scope="col">Judul Materi</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+<div class="text-end">
+  <button id="btnSimpan" class="btn btn-primary px-4 mt-2">💾 Simpan</button>
+</div>
+      </div>
+    </div>
+
+    <div id="progress" class="mt-3"></div>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Modal Scanner -->
+  <div class="modal fade" id="modalScanQR" tabindex="-1" aria-labelledby="scanLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-success text-white">
+          <h5 class="modal-title" id="scanLabel">📷 Scan QR Santri</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body text-center">
+          <div id="reader" style="width:100%;"></div>
+          <div id="scanStatus" class="mt-2 text-muted small">Arahkan kamera ke QR Code...</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="closeScan">Tutup</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script utama -->
+  <script>
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwnW_hrau_LwowBmGp4Pn6YYJrqkcAV1CHQ-ddGvBldlR6_vn0ZU9jpZi5UEfkmiCIQFg/exec";
+    const pelajaranSelect = document.getElementById("pelajaran");
+    const tabel = document.getElementById("tabelMateri");
+    const tbody = tabel.querySelector("tbody");
+    let progressSantri = [];
+    let pelajaranData = {}; // simpan data pelajaran agar tidak menambah listener berulang
+
+    // 🔹 Fungsi deteksi teks Arab
+    function isArabic(text) {
+      return /[\u0600-\u06FF\u0750-\u077F]/.test(text);
+    }
+
+    function isiDariURL() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("stambuk")) document.getElementById("stambuk").value = params.get("stambuk");
+      if (params.has("nama")) document.getElementById("nama").value = decodeURIComponent(params.get("nama"));
+      if (params.has("kelas")) document.getElementById("kelas").value = params.get("kelas");
+      if (params.has("daerah")) document.getElementById("daerah").value = params.get("daerah");
+    }
+    isiDariURL();
+
+    // Render daftar materi berdasarkan pelajaran terpilih dan progressSantri
+    function renderMateri(pelajaranKey) {
+      tbody.innerHTML = "";
+      if (!pelajaranKey || !pelajaranData[pelajaranKey]) {
+        tabel.style.display = "none";
+        return;
+      }
+
+      tabel.style.display = "table";
+      const judulSudah = progressSantri.map(p => p.materi || p.judul); // adaptasi nama field
+      let no = 1;
+      pelajaranData[pelajaranKey].forEach((m) => {
+        const rtlClass = isArabic(m.judul) ? "rtl" : "ltr";
+        if (m.type === "Judul") {
+          tbody.innerHTML += `
+            <tr class="table-secondary ${rtlClass}">
+              <td colspan="3" class="fw-bold text-primary">${m.judul}</td>
+            </tr>`;
+        } else {
+          const sudah = judulSudah.includes(m.id) || judulSudah.includes(m.judul);
+          tbody.innerHTML += sudah
+            ? `<tr class="reported ${rtlClass}">
+                 <td>${no++}</td>
+                 <td>${m.judul}</td>
+                 <td>✔</td>
+               </tr>`
+            : `<tr class="${rtlClass}">
+                 <td>${no++}</td>
+                 <td>${m.judul}</td>
+                 <td><input type="checkbox" value="${m.id}"></td>
+               </tr>`;
+        }
+      });
+    }
+
+    // Load pelajaran dari server (satu-satunya yang fetch untuk pelajaran)
+    async function loadPelajaran() {
+      try {
+        const res = await fetch(scriptURL, {
+          method: "POST",
+          body: JSON.stringify({ action: "getPelajaran" })
+        });
+        const data = await res.json();
+        pelajaranData = data || {};
+
+        // render options
+        pelajaranSelect.innerHTML = `<option value="">-- Pilih Pelajaran --</option>`;
+        Object.keys(pelajaranData).forEach(p => {
+          pelajaranSelect.innerHTML += `<option value="${p}">${p}</option>`;
+        });
+      } catch (err) {
+        showToast("Gagal memuat pelajaran: " + err.message, "danger");
+      }
+    }
+
+    // Panggil sekali dan pasang change listener sekali
+    loadPelajaran();
+    pelajaranSelect.addEventListener("change", () => {
+      renderMateri(pelajaranSelect.value);
+    });
+
+    // Toast util
+    function showToast(message, type="primary", delay=3000) {
+      const id = "t" + Date.now();
+      const toastHtml = `
+        <div id="${id}" class="toast align-items-center text-bg-${type}" role="alert" aria-live="assertive" aria-atomic="true">
+          <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+        </div>`;
+      const container = document.getElementById("toastContainer");
+      container.insertAdjacentHTML("beforeend", toastHtml);
+      const toastEl = document.getElementById(id);
+      const toast = new bootstrap.Toast(toastEl, { delay });
+      toast.show();
+      toastEl.addEventListener("hidden.bs.toast", () => toastEl.remove());
+    }
+
+    // Simpan data
+    document.getElementById("btnSimpan").addEventListener("click", async () => {
+       const ustadz = document.getElementById("pembimbing").value.trim();
+        const jenis = document.getElementById("jenis").value.trim();
+
+  // 🔹 Validasi wajib isi
+  if (!ustadz) {
+    alert("⚠️ Silakan pilih Ustadz Pembimbing terlebih dahulu.");
+    return;
+  }
+  if (!jenis) {
+    alert("⚠️ Silakan pilih Jenis Belajar terlebih dahulu.");
+    return;
+  }
+      const judulDipilih = [...tbody.querySelectorAll("input:checked")].map(x => x.value);
+      const data = {
+        stambuk: stambuk.value.trim(),
+        nama: nama.value.trim(),
+        kelas: kelas.value.trim(),
+        daerah: daerah.value.trim(),
+        ustadz: document.getElementById("pembimbing").value,
+        jenis: document.getElementById("jenis").value,
+        pelajaran: pelajaranSelect.value,
+        judul: judulDipilih
+      };
+
+      if (!data.stambuk || !data.nama || !data.pelajaran || data.judul.length === 0) {
+        showToast("Lengkapi semua kolom dan pilih minimal satu judul materi.", "warning");
+        return;
+      }
+
+      const btn = document.getElementById("btnSimpan");
+      btn.disabled = true;
+      btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status"></span>Sedang menyimpan...`;
+
+      try {
+        const res = await fetch(scriptURL, {
+          method: "POST",
+          body: JSON.stringify({ action: "simpanData", data })
+        });
+        const hasil = await res.json();
+
+        showToast(hasil.message || "Data berhasil disimpan!", "success");
+        // setelah simpan, muat ulang progress dari server agar konsisten
+        await muatProgress(data.stambuk);
+        // render ulang materi untuk menandai yang sudah dilaporkan
+        renderMateri(pelajaranSelect.value);
+        // 🔹 Reset dropdown Pelajaran & tabel setelah simpan
+pelajaranSelect.value = "";         // kembalikan dropdown ke posisi awal
+tabel.style.display = "none";       // sembunyikan tabel materi
+tbody.innerHTML = "";               // hapus isi tabel
+
+      } catch (err) {
+        showToast("Gagal menyimpan: " + err.message, "danger");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `💾 Simpan`;
+      }
+    });
+
+    // Muat progress berdasarkan stambuk
+    async function muatProgress(stambukVal) {
+      const div = document.getElementById("progress");
+      if (!stambukVal) {
+        div.innerHTML = "<p class='text-muted'>Masukkan stambuk untuk melihat progress.</p>";
+        progressSantri = [];
+        return;
+      }
+
+      div.innerHTML = "<div class='text-center text-muted'>⏳ Memuat progress...</div>";
+      try {
+        const res = await fetch(scriptURL, {
+          method: "POST",
+          body: JSON.stringify({ action: "getProgress", stambuk: stambukVal })
+        });
+    const rows = await res.json();
+    // Urutkan dari terbaru ke lama
+    rows.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+    progressSantri = rows;
+        progressSantri = Array.isArray(rows) ? rows : [];
+
+
+       if (progressSantri.length === 0) {
+  div.innerHTML = `
+    <div class="card mt-3 shadow-sm">
+      <div class="card-header bg-primary text-white fw-bold">Progress Sebelumnya</div>
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item text-muted">Belum ada progress.</li>
+      </ul>
+    </div>
+  `;
+} else {
+  const listItems = progressSantri.map(r => {
+    const materi = r.materi || r.judul || "-";
+    const tanggal = r.tanggal || r.date || "-";
+    const pel = r.pelajaran || "-";
+    const jenis = r.jenis || "-";
+
+    // 🔹 Ubah format tanggal agar lebih manusiawi
+    const tanggalLocal = new Date(tanggal).toLocaleString("id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    return `
+      <li class="list-group-item">
+        <div class="d-flex justify-content-between">
+          <div>
+            <strong>${pel}</strong><br>
+            <small class="text-muted">${materi}</small>
+          </div>
+          <div class="text-end">
+            <small class="text-secondary">${tanggalLocal}</small><br>
+            <span class="badge bg-info text-dark">${jenis}</span>
+          </div>
+        </div>
+      </li>
+    `;
+  }).join("");
+
+  div.innerHTML = `
+    <div class="card mt-3 shadow-sm">
+      <div class="card-header bg-primary text-white fw-bold">Progress Sebelumnya</div>
+      <ul class="list-group list-group-flush">${listItems}</ul>
+    </div>
+  `;
+}
+
+        // jika tabel sedang terlihat, refresh render untuk menandai reported rows
+        renderMateri(pelajaranSelect.value);
+      } catch (err) {
+        progressSantri = [];
+        div.innerHTML = `<p class='text-danger'>Gagal memuat progress: ${err.message}</p>`;
+      }
+    }
+
+    // Stambuk input: listen ke input (bekerja juga saat programmatically di-set)
+    const stambukInput = document.getElementById("stambuk");
+    if (stambukInput.value.trim()) muatProgress(stambukInput.value.trim());
+    stambukInput.addEventListener("input", () => {
+      muatProgress(stambukInput.value.trim());
+    });
+
+  </script>
+
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // QR scanner logic (memastikan kompatibilitas dengan perubahan)
+    let html5QrCode;
+    document.getElementById("modalScanQR").addEventListener("shown.bs.modal", async () => {
+      const readerId = "reader";
+      html5QrCode = new Html5Qrcode(readerId);
+      const qrConfig = { fps: 10, qrbox: 250 };
+
+      try {
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          qrConfig,
+          (decodedText) => {
+            document.getElementById("scanStatus").textContent = "✅ QR terdeteksi!";
+            // decodedText diasumsikan url-like: ...?stambuk=...&nama=...
+            try {
+              const rawParams = decodedText.includes("?") ? decodedText.split("?")[1] : decodedText;
+              const params = new URLSearchParams(rawParams);
+              if (params.has("stambuk")) document.getElementById("stambuk").value = params.get("stambuk");
+              if (params.has("nama")) document.getElementById("nama").value = decodeURIComponent(params.get("nama"));
+              if (params.has("kelas")) document.getElementById("kelas").value = params.get("kelas");
+              if (params.has("daerah")) document.getElementById("daerah").value = params.get("daerah");
+
+              // pastikan pelajaran dimuat jika belum, lalu muat progress (langsung)
+              loadPelajaran().catch(()=>{});
+              // trigger input event agar muatProgress berjalan (stambuk sudah di-set)
+              stambukInput.dispatchEvent(new Event('input'));
+
+              // reset pelajaranSelect (UI)
+              pelajaranSelect.innerHTML = `<option value="">-- Pilih Pelajaran --</option>`;
+              tabel.style.display = "none";
+
+              setTimeout(() => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById("modalScanQR"));
+                modal.hide();
+              }, 700);
+            } catch (e) {
+              console.error("Parsing QR error", e);
+            }
+          },
+          () => {
+            document.getElementById("scanStatus").textContent = "Mendeteksi QR...";
+          }
+        );
+      } catch (err) {
+        document.getElementById("scanStatus").textContent = "❌ Kamera gagal dibuka.";
+      }
+    });
+
+    document.getElementById("modalScanQR").addEventListener("hidden.bs.modal", async () => {
+      if (html5QrCode) {
+        await html5QrCode.stop().catch(() => {});
+        html5QrCode.clear();
+      }
+      document.getElementById("scanStatus").textContent = "Arahkan kamera ke QR Code...";
+    });
+
+    // 🔹 Load data pembimbing dari JSON saat DOM content ready
+    document.addEventListener("DOMContentLoaded", async () => {
+      const pembimbingSelect = $("#pembimbing");
+      try {
+        const res = await fetch("pembimbing.json");
+        const data = await res.json();
+
+        pembimbingSelect.empty().append('<option value="">-- Pilih Ustadz Pembimbing --</option>');
+        data.forEach(item => {
+          pembimbingSelect.append(`<option value="${item.nama}">${item.nama}</option>`);
+        });
+
+        pembimbingSelect.select2({
+          placeholder: "Cari nama ustadz...",
+          allowClear: true,
+          width: 'resolve'
+        });
+      } catch (err) {
+        console.error("Gagal load JSON:", err);
+        pembimbingSelect.html('<option value="">Gagal memuat data 😢</option>');
+      }
+    });
+  </script>
+</body>
+</html>
