@@ -139,9 +139,6 @@
         </div>
         <div class="text-end">
           <button id="btnSimpan" class="btn btn-primary px-4 mt-2">💾 Simpan</button>
-          <button id="btnScanQR" class="btn btn-success px-4 mt-2 ms-2" data-bs-toggle="modal" data-bs-target="#modalScanQR">📷 Scan QR</button>
-        </div>
-      </div>
     </div>
 
     <div id="progress" class="mt-3"></div>
@@ -302,8 +299,9 @@
         if (rows.length === 0) {
           div.innerHTML = "<p class='text-muted'>Belum ada progress.</p>";
         } else {
+          rows.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
           div.innerHTML = "<h5 class='fw-semibold text-primary mb-2'>Progress Sebelumnya:</h5><ul class='list-group'>" +
-            rows.map(r => `<li class='list-group-item'>${Date.toString(r.tanggal)} - <b>${r.pelajaran}</b> (${r.materi}) [${r.jenis}]</li>`).join("") +
+            rows.map(r => `<li class='list-group-item'>${new Date(r.tanggal).toDateString('dd-mm-yy')} - <b>${r.pelajaran}</b> (${r.materi}) [${r.jenis}]</li>`).join("") +
             "</ul>";
         }
       } catch (err) {
