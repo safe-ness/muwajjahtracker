@@ -193,6 +193,7 @@
           method: "POST",
           body: JSON.stringify({ action: "getPelajaran" })
         });
+        
         const data = await res.json();
 
         pelajaranSelect.innerHTML = `<option value="">-- Pilih Pelajaran --</option>`;
@@ -306,7 +307,7 @@
           div.innerHTML = "<p class='text-muted'>Belum ada progress.</p>";
         } else {
           div.innerHTML = "<h5 class='fw-semibold text-primary mb-2'>Progress Sebelumnya:</h5><ul class='list-group'>" +
-            rows.map(r => `<li class='list-group-item'>${r.tanggal} - <b>${r.pelajaran}</b> (${r.materi}) [${r.jenis}]</li>`).join("") +
+            rows.map(r => `<li class='list-group-item'>${Date.toString(r.tanggal)} - <b>${r.pelajaran}</b> (${r.materi}) [${r.jenis}]</li>`).join("") +
             "</ul>";
         }
       } catch (err) {
